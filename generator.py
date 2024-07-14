@@ -2,6 +2,7 @@ import torch
 from torch import nn
 
 # m = 49, n = 900, k = 44100
+# m = 49, n = 450, k = 22050
 # k(sound sample length). ceil(k/m) = n, n-1 < k/m <= n, m(n-1) < k <= mn, 44051 < k <= 44100
 
 
@@ -51,7 +52,7 @@ class GeneratorCell(nn.Module):
         srt = self.embedding_layer(it) * alpha_t.unsqueeze(-1).unsqueeze(-1)  # embedding result * alpha: b*n*k*2
 
         # Overlapping sounds
-        f_srt = torch.empty((self.batch_size, 0, 2))
+        f_srt = torch.zeros((self.batch_size, self.n+self.k-1, 2))
         for i, srti in enumerate(srt.permute(1, 0, 2, 3)):  # b*n*k*2 => n*b*k*2
             f_srt += torch.cat([torch.zeros((self.batch_size, i, 2)), srti], dim=1)
         # f_srt: b*(n+k-1)*2
