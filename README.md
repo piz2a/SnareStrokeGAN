@@ -1,8 +1,8 @@
 # SnareStrokeGAN
 
 ### TODO:
-- [ ] Slicing / Annotating sound samples
-- [ ] Creating Embedding layer
+- [X] Slicing / Annotating sound samples
+- [X] Creating Embedding layer
 - [ ] Generator
 - [ ] Discriminator
 - [ ] Train
