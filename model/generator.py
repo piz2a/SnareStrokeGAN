@@ -48,17 +48,20 @@ class GeneratorCell(nn.Module):
               self.sigmoid_it(self.linear_ht(ht.squeeze(0)).squeeze(1))).long()  # 1*b*n -> b*n -> b*1 -> b
         # print(f'ht: {ht.size()}, it: {it.size()}')
         print('it value:', it)
-        srt = self.embedding_layer(it)  # n
+        srt = self.embedding_layer(it)  # b*n
 
         # Conserve gate
         ct = self.sigmoid_ct(self.linear_ct(self.relu_ct(torch.cat([ht, da_t], dim=1)))).squeeze()  # b
 
         # New sound (max 32767   이거 해야 함) tanh?
-        st1_fragment = torch.empty((0, st1.size()[1] - da_t.size()[1] + 1)).to(self.device)
+        st1_fragment = torch.empty((0, self.n)).to(self.device)  # batch의 각 data마다 길이가 다름
         for b, st1_b in enumerate(st1):
             print("frag", da_t.size(), st1.size()[1] - da_t.size()[1] + 1, st1_b[da_t[b]:].size())
-            st1_fragment = torch.cat((st1_fragment, st1_b[da_t[b]:].unsqueeze(0) * ct[b]))
-        zeros = torch.zeros((self.batch_size, da_t.size()[1] - 1)).to(self.device)
+            zeros = torch.zeros(da_t[b]).to(self.device)
+            st1_fragment = torch.cat((
+                st1_fragment,
+                torch.cat([st1_b[da_t[b]:], zeros]).unsqueeze(0) * ct[b]
+            ))
         print(f'ct: {ct}, st1_fragment: {st1_fragment.size()}, zeros: {zeros.size()}')
         st = torch.cat([st1_fragment, zeros], dim=1) + srt  # b*n
 
