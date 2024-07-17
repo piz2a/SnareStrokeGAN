@@ -22,6 +22,6 @@ def create_initial_embedding(resource_root, leaves, length):
 
 if __name__ == '__main__':
     embedding = create_initial_embedding('../resources/processed/single', ['strong', 'medium', 'tip'], 24000)
-    print(embedding)
+    print(embedding)  # max(abs(embedding)): 32767
     print(embedding.size())
     torch.save(embedding, '../resources/embedding/initial_embedding.pt')
