@@ -97,6 +97,8 @@ class Generator(nn.Module):
 
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+
     device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
     embedding_layer = get_embedding_layer('../resources/embedding').to(device)
     print(embedding_layer)
@@ -109,3 +111,7 @@ if __name__ == '__main__':
     alpha = torch.LongTensor([[0, 3000, 6000, 9000, 12000, 15000, 18000, 21000], [0, 4500, 6000, 10500, 12000, 16500, 18000, 22500]])
     result = g(z, alpha)
     print(result)
+
+    result.requires_grad = False
+    plt.plot(list(range(frame_count)), result[0])
+    plt.show()

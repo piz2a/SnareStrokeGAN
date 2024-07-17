@@ -4,7 +4,7 @@ GAN model which synthesizes snare drum stroke waves from MIDI by sorting and fil
 ### TODO:
 - [X] Slicing / Annotating sound samples
 - [X] Creating Embedding layer
-- [ ] Generator
+- [X] Generator
 - [ ] Discriminator
 - [ ] Train
 - [ ] Integrating with VST3 plugin
