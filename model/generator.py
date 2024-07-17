@@ -87,8 +87,12 @@ class Generator(nn.Module):
             st, ht = self.cell(st, ht, zt, da_t)
             print(f"max(st): {torch.max(st)}, ht: {ht.size()}")
             for b, alpha_ib in enumerate(alpha[:, i]):
-                print(f"alpha_ib: {sum_s[b, :alpha_ib].size()}, st: {st[b].size()}, zeros: {torch.zeros(sum_s.size()[1] - alpha_ib - self.n).size()}")
-                sum_s[b] = torch.cat([sum_s[b, :alpha_ib], st[b], torch.zeros((sum_s.size()[1] - alpha_ib - self.n,)).to(self.device)])
+                padding_length = self.frame_count - alpha_ib - self.n
+                print(f"alpha_ib: {sum_s[b, :alpha_ib].size()}, st: {st[b].size()}, padding_length: {padding_length}")
+                if padding_length >= 0:
+                    sum_s[b] = torch.cat([sum_s[b, :alpha_ib], st[b], torch.zeros(padding_length).to(self.device)])
+                else:
+                    sum_s[b] = torch.cat([sum_s[b, :alpha_ib], st[b, :-padding_length]])
         return sum_s  # b*l
 
 
@@ -98,7 +102,7 @@ if __name__ == '__main__':
     print(embedding_layer)
     n = 14676
     batch_size = 2
-    frame_count = 24000
+    frame_count = 48000
     g = Generator(device, batch_size, n, frame_count, embedding_layer).to(device)
     print(g)
     z = torch.randn((batch_size, 8, n-1))
