@@ -65,10 +65,10 @@ class Generator(nn.Module):
         sum_s = torch.empty((self.batch_size, 0)).to(self.device)
         for i, zt in enumerate(z.permute(1, 0, 2)):  # k*b*(n-1). zt: b*(n-1)
             alpha_t1 = alpha[i-1] if i > 0 else 0
-            da_t = alpha[i] - alpha_t1
+            da_t = alpha[:, i] - alpha_t1
             st, ht = self.cell(st, ht, zt, da_t)
-            prev_sum_s = sum_s[:, :alpha[i]] if sum_s.size()[1] >= alpha[i] \
-                else torch.cat([sum_s, torch.zeros((self.batch_size, alpha[i] - sum_s.size()[1])).to(self.device)], dim=1)
+            prev_sum_s = sum_s[:, :alpha[:, i]] if sum_s.size()[1] >= alpha[:, i] \
+                else torch.cat([sum_s, torch.zeros((self.batch_size, alpha[:, i] - sum_s.size()[1])).to(self.device)], dim=1)
             sum_s = torch.cat([prev_sum_s, st], dim=1)
         return sum_s  # b*l
 
