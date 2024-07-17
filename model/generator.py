@@ -77,7 +77,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     embedding_layer = get_embedding_layer('../resources/embedding').to(device)
     print(embedding_layer)
-    n = 24000
+    n = 14676
     batch_size = 2
     g = Generator(device, batch_size, n, embedding_layer).to(device)
     print(g)
