@@ -32,7 +32,7 @@ class GeneratorCell(nn.Module):
 
     def forward(self, st1, ht1, zt, da_t):
         da_t = da_t.unsqueeze(1)
-        Mt1 = torch.cat([self.conv1d_st1(st1).squeeze(), ht1], dim=1)  # b*2n
+        Mt1 = torch.cat([self.conv1d_st1(st1.unsqueeze(1)).squeeze(), ht1], dim=1)  # b*2n
         Ht1 = self.linear_mt1(self.relu_mt1(Mt1)).unsqueeze(0)  # 1*b*n
 
         xt = torch.cat((zt, da_t), dim=1)  # b*n
@@ -67,7 +67,8 @@ class Generator(nn.Module):
             alpha_t1 = alpha[i-1] if i > 0 else 0
             da_t = alpha[i] - alpha_t1
             st, ht = self.cell(st, ht, zt, da_t)
-            prev_sum_s = sum_s[:, :alpha[i]] if sum_s.size()[1] >= alpha[i] else torch.zeros((self.batch_size, alpha[i]))
+            prev_sum_s = sum_s[:, :alpha[i]] if sum_s.size()[1] >= alpha[i] \
+                else torch.cat([sum_s, torch.zeros((self.batch_size, alpha[i] - sum_s.size()[1])).to(self.device)], dim=1)
             sum_s = torch.cat([prev_sum_s, st], dim=1)
         return sum_s  # b*l
 
