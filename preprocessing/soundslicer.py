@@ -46,7 +46,8 @@ def annotate_sound2(sound, min_volume, max_volume=1., patience=0.2):
     return annotations
 
 
-def slice_sound(samples, annotations):
+def slice_sound(sound, annotations):
+    samples = sound.get_array_of_samples()
     new_sounds = []
     for annotation in annotations:
         samples_numpy = np.array(samples)[annotation[0]:annotation[1]]
@@ -54,6 +55,32 @@ def slice_sound(samples, annotations):
         new_sound = sound._spawn(new_samples_array)
         new_sounds.append(new_sound)
     return new_sounds
+
+
+def process_single(single_stroke_dir):
+    for name, args in conditions_single:
+        sound = AudioSegment.from_file(f'{single_stroke_dir}/{name}.m4a', 'm4a')
+        samples = sound.get_array_of_samples()
+        print(len(samples), max(samples))
+        print(sound.frame_rate, sound.array_type)
+        annotations = annotate_sound1(sound, *args)
+        print(len(annotations))
+        new_sounds = slice_sound(sound, annotations)
+        directory = f'{single_stroke_dir}/{name}'
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        for i, new_sound in enumerate(new_sounds):
+            new_sound.export(f'{directory}/{i}.wav', format='wav')
+
+
+def annotate_multiple_strokes(multiple_stroke_dir):
+    for filename in os.listdir(multiple_stroke_dir):
+        print(filename)
+        sound = AudioSegment.from_file(f'{multiple_stroke_dir}/{filename}', 'm4a')
+        annotations = annotate_sound2(sound, 0.3, 1.0, 1/12)
+        with open(f'../resources/processed/annotation/{filename.split(".")[0]}.txt', 'w') as f:
+            f.write(f'{len(sound.get_array_of_samples())}\n')
+            f.write("\n".join(f'{annotation[0]} {annotation[1]}' for annotation in annotations))
 
 
 if __name__ == '__main__':
@@ -64,26 +91,7 @@ if __name__ == '__main__':
     ]
 
     # Slice sounds
-    for name, args in conditions_single:
-        sound = AudioSegment.from_file(f'../resources/original/single/{name}.m4a', 'm4a')
-        samples = sound.get_array_of_samples()
-        print(len(samples), max(samples))
-        print(sound.frame_rate, sound.array_type)
-        annotations = annotate_sound1(sound, *args)
-        print(len(annotations))
-        new_sounds = slice_sound(samples, annotations)
-        directory = f'../resources/processed/single/{name}'
-        if not os.path.exists(directory):
-            os.mkdir(directory)
-        for i, new_sound in enumerate(new_sounds):
-            new_sound.export(f'{directory}/{i}.wav', format='wav')
+    process_single('../resources/original/single')
 
-    # Annotate Sounds
-    multiple_stroke_dir = '../resources/original/multiple'
-    for filename in os.listdir(multiple_stroke_dir):
-        print(filename)
-        sound = AudioSegment.from_file(f'{multiple_stroke_dir}/{filename}', 'm4a')
-        samples = sound.get_array_of_samples()
-        annotations = annotate_sound2(sound, 0.3, 1.0, 1/12)
-        with open(f'../resources/processed/annotation/{filename.split(".")[0]}.txt', 'w') as f:
-            f.write("\n".join(f'{annotation[0]} {annotation[1]}' for annotation in annotations))
+    # Annotate sounds
+    annotate_multiple_strokes('../resources/original/multiple')

@@ -1,6 +1,8 @@
 import torch
 from torch import nn
-import os
+
+
+DEBUG = False
 
 
 # Create embedding layer from trained data or initial data. If there is none, it creates one
@@ -36,18 +38,18 @@ class GeneratorCell(nn.Module):
         Mt1 = torch.cat([self.conv1d_st1(st1.unsqueeze(1)).squeeze(1), ht1], dim=1)  # b*2n
         Ht1 = self.linear_mt1(self.relu_mt1(Mt1)).unsqueeze(0)  # 1*b*n
 
-        # print(f'zt: {zt.size()}, da_t: {da_t.size()}')
+        if DEBUG: print(f'zt: {zt.size()}, da_t: {da_t.size()}')
         xt = torch.cat((zt, da_t), dim=1).unsqueeze(0)  # 1*b*n
-        # print(f'xt: {xt.size()}, Ht1: {Ht1.size()}')
+        if DEBUG: print(f'xt: {xt.size()}, Ht1: {Ht1.size()}')
         output, ht = self.gru(xt, Ht1)  # 1*b*n
         ht = ht.squeeze(0)
-        # print(output == ht)
+        if DEBUG: print(output == ht)
 
         # Sound sample
         it = ((self.embedding_layer.weight.size()[0] - 1) *  # 284 - 1
               self.sigmoid_it(self.linear_ht(ht.squeeze(0)).squeeze(1))).long()  # 1*b*n -> b*n -> b*1 -> b
-        # print(f'ht: {ht.size()}, it: {it.size()}')
-        print('it value:', it)
+        if DEBUG: print(f'ht: {ht.size()}, it: {it.size()}')
+        if DEBUG: print('it value:', it)
         srt = self.embedding_layer(it)  # b*n
 
         # Conserve gate
@@ -56,13 +58,13 @@ class GeneratorCell(nn.Module):
         # New sound (max 32767   이거 해야 함) tanh?
         st1_and_zeros = torch.empty((0, self.n)).to(self.device)  # b*n. the sound length of each data of a batch varies
         for b, st1_b in enumerate(st1):
-            print("frag", da_t.size(), st1.size()[1] - da_t.size()[1] + 1, st1_b[da_t[b]:].size())
+            if DEBUG: print("frag", da_t.size(), st1.size()[1] - da_t.size()[1] + 1, st1_b[da_t[b]:].size())
             zeros = torch.zeros(da_t[b]).to(self.device)
             st1_and_zeros = torch.cat((
                 st1_and_zeros,
                 torch.cat([st1_b[da_t[b]:], zeros]).unsqueeze(0) * ct[b]
             ))
-        print(f'ct: {ct}, st1_fragment: {st1_and_zeros.size()}, zeros: {zeros.size()}')
+        if DEBUG: print(f'ct: {ct}, st1_fragment: {st1_and_zeros.size()}, zeros: {zeros.size()}')
         st = st1_and_zeros + srt  # b*n
 
         return st, ht
@@ -85,10 +87,10 @@ class Generator(nn.Module):
             alpha_t1 = alpha[:, i-1] if i > 0 else 0
             da_t = alpha[:, i] - alpha_t1
             st, ht = self.cell(st, ht, zt, da_t)
-            print(f"max(st): {torch.max(st)}, ht: {ht.size()}")
+            if DEBUG: print(f"max(st): {torch.max(st)}, ht: {ht.size()}")
             for b, alpha_ib in enumerate(alpha[:, i]):
                 padding_length = self.frame_count - alpha_ib - self.n
-                print(f"alpha_ib: {sum_s[b, :alpha_ib].size()}, st: {st[b].size()}, padding_length: {padding_length}")
+                if DEBUG: print(f"alpha_ib: {sum_s[b, :alpha_ib].size()}, st: {st[b].size()}, padding_length: {padding_length}")
                 if padding_length >= 0:
                     sum_s[b] = torch.cat([sum_s[b, :alpha_ib], st[b], torch.zeros(padding_length).to(self.device)])
                 else:
@@ -100,6 +102,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import os
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+    DEBUG = True
 
     device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
     embedding_layer = get_embedding_layer('../resources/embedding').to(device)
