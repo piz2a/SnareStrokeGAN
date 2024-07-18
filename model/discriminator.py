@@ -7,7 +7,7 @@ class DiscriminatorCell(nn.Module):
         super().__init__()
         self.frame_rate = frame_rate
 
-        self.conv1 = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=2, stride=round(frame_rate / 2)-1, device=device)  # (batch, 1, frame_rate) -> (batch, 1, 3)
+        self.gru = nn.GRU(input_size=frame_rate, hidden_size=3, device=device)  # (batch, frame_rate) -> (batch, 3)
         self.conv2 = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, padding=1, device=device)  # (batch, 1, 3) -> (batch, 32, 3)
         self.relu2 = nn.ReLU(device)
         self.conv3 = nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3, device=device)  # (batch, 32, 3) -> (batch, 16, 1)
@@ -16,9 +16,9 @@ class DiscriminatorCell(nn.Module):
         self.lstm = nn.LSTMCell(input_size=10, hidden_size=10, device=device)
 
     def forward(self, interval, sound_fragment, ht1ct1):  # b, b*(frame_rate+1), (ht, ct)
-        x = self.conv1(sound_fragment.unsqueeze(1))
-        # print(x.size())
-        x = self.relu2(self.conv2(x))
+        output, ht = self.gru(torch.abs(sound_fragment))
+        # print(ht.size())
+        x = self.relu2(self.conv2(ht.unsqueeze(1)))
         # print(x.size())
         x = self.conv3(x)
         # print(x.size(), interval.size())
