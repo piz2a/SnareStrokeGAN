@@ -73,7 +73,7 @@ def train(device, epochs):
 
                 i += 1
                 print(i, end=' ')
-                print(middle_time - start_time, time.time() - middle_time, time.time() - start_time)
+                # print(middle_time - start_time, time.time() - middle_time, time.time() - start_time)
                 start_time = time.time()
             print()
 
@@ -90,15 +90,15 @@ def train(device, epochs):
                 with torch.autograd.no_grad():
                     p_real += (torch.sum(discriminator(annotations, sample)).item()) / test_annotations_count
                     z = torch.randn((batch_size, annotation_count, n-1)).to(device)
-                    p_fake += (torch.sum(discriminator(generator(z, annotations))).item()) / test_annotations_count
+                    p_fake += (torch.sum(discriminator(annotations, generator(z, annotations))).item()) / test_annotations_count
         p_real_trace.append(p_real)
         p_fake_trace.append(p_fake)
 
+        print(f'(epoch {epoch + 1}/{epochs}) p_real: {p_real}, p_g: {p_fake}, loss: G {g_loss} / D {d_loss}')
         with open('record.pickle', 'a') as f:
             f.write(f'{g_loss} {d_loss} {p_real} {p_fake}\n')
 
         if (epoch + 1) % 3 == 0:
-            print(f'(epoch {epoch + 1}/{epochs}) p_real: {p_real}, p_g: {p_fake}')
             torch.save(generator.state_dict(), 'generator.pth')
             torch.save(discriminator.state_dict(), 'discriminator.pth')
 
