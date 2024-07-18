@@ -1,6 +1,7 @@
-from soundslicer import *
+from .soundslicer import *
 from torch.utils.data import Dataset, DataLoader
 import pickle
+import torch
 
 
 class StrokeAnnotationDataset(Dataset):
@@ -21,6 +22,8 @@ class StrokeAnnotationDataset(Dataset):
                 pickle.dump(self.dataset_full, f)  # and save
 
         # Crop dataset
+        # print(sum(len(self.dataset_full[i]) for i in self.dataset_full))  # 2209
+        # print(self.dataset_full.keys())  # 1 ~ 12
         self.dataset = self.dataset_full[self.annotation_count]
         edge_index = round(len(self.dataset) * ratio)
         self.dataset = self.dataset[:edge_index] if train else self.dataset[-edge_index:]
@@ -39,12 +42,12 @@ class StrokeAnnotationDataset(Dataset):
                 if file_frame_count - annotation[0] < self.frame_count * 1:
                     continue
                 while i < annotation_count and annotations[i][0] - annotation[0] < self.frame_count * 1:  # within 1s
-                    annotations_fragment.append(annotations[i])
+                    annotations_fragment.append(annotations[i][0])
                     i += 1
                 annotations_fragment_count = len(annotations_fragment)
                 if annotations_fragment_count not in result:
                     result[annotations_fragment_count] = []
-                result[annotations_fragment_count].append((file_num, annotations_fragment))
+                result[annotations_fragment_count].append((file_num, torch.LongTensor(annotations_fragment)))
         return result
 
     def __len__(self):
@@ -54,8 +57,8 @@ class StrokeAnnotationDataset(Dataset):
         file_num, annotations = self.dataset[index]
         sound = AudioSegment.from_file(f'{self.resource_dir}/original/multiple/{file_num}.m4a', 'm4a')
         samples = np.array(sound.get_array_of_samples())
-        sample_cropped = samples[annotations[0][0]:annotations[0][0]+self.frame_count]
-        print(annotations, sample_cropped.shape)
+        sample_cropped = samples[annotations[0]:annotations[0]+self.frame_count]
+        # print(annotations, sample_cropped.shape)
         return annotations, sample_cropped
 
 
@@ -70,6 +73,6 @@ if __name__ == '__main__':
     print(len(train_data_loader), len(test_data_loader))
 
     for x, y in train_data_loader:
-        print(x)
-        print(y)
+        print('x:', x.size())
+        print('y:', y.size())
         break

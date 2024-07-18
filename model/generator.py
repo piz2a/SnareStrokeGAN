@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import os
 
 
 DEBUG = False
@@ -100,7 +101,6 @@ class Generator(nn.Module):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    import os
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
     DEBUG = True
 
