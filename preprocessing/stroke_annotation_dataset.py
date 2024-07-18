@@ -1,4 +1,7 @@
-from .soundslicer import *
+if __name__ == '__main__':
+    from soundslicer import *
+else:
+    from .soundslicer import *
 from torch.utils.data import Dataset, DataLoader
 import pickle
 import torch
@@ -42,7 +45,7 @@ class StrokeAnnotationDataset(Dataset):
                 if file_frame_count - annotation[0] < self.frame_count * 1:
                     continue
                 while i < annotation_count and annotations[i][0] - annotation[0] < self.frame_count * 1:  # within 1s
-                    annotations_fragment.append(annotations[i][0])
+                    annotations_fragment.append(annotations[i][0] - annotation[0])
                     i += 1
                 annotations_fragment_count = len(annotations_fragment)
                 if annotations_fragment_count not in result:

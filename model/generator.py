@@ -60,7 +60,8 @@ class GeneratorCell(nn.Module):
         st1_and_zeros = torch.empty((0, self.n)).to(self.device)  # b*n. the sound length of each data of a batch varies
         for b, st1_b in enumerate(st1):
             if DEBUG: print("frag", da_t.size(), st1.size()[1] - da_t.size()[1] + 1, st1_b[da_t[b]:].size())
-            zeros = torch.zeros(da_t[b]).to(self.device)
+            zeros = torch.zeros(min(da_t[b], self.n)).to(self.device)   # da_t[b] > n이면 이전과 현재 스트로크의 간격이 넓어 남은 소리가 없는 경우.
+            if DEBUG: print(st1_b.size(), st1_b[da_t[b]:].size(), zeros.size())
             st1_and_zeros = torch.cat((
                 st1_and_zeros,
                 torch.cat([st1_b[da_t[b]:], zeros]).unsqueeze(0) * ct[b]
@@ -87,6 +88,7 @@ class Generator(nn.Module):
         for i, zt in enumerate(z.permute(1, 0, 2)):  # k*b*(n-1). zt: b*(n-1)
             alpha_t1 = alpha[:, i-1] if i > 0 else 0
             da_t = alpha[:, i] - alpha_t1
+            if DEBUG: print('da_t:', da_t)
             st, ht = self.cell(st, ht, zt, da_t)
             if DEBUG: print(f"max(st): {torch.max(st)}, ht: {ht.size()}")
             for b, alpha_ib in enumerate(alpha[:, i]):
