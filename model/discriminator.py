@@ -10,10 +10,10 @@ class DiscriminatorCell(nn.Module):
         self.conv1 = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=2, stride=round(frame_rate / 2)-1, device=device)  # (batch, 1, frame_rate) -> (batch, 1, 3)
         self.conv2 = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, padding=1, device=device)  # (batch, 1, 3) -> (batch, 32, 3)
         self.relu2 = nn.ReLU(device)
-        self.conv3 = nn.Conv1d(in_channels=32, out_channels=128, kernel_size=3, device=device)  # (batch, 32, 3) -> (batch, 128, 1)
+        self.conv3 = nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3, device=device)  # (batch, 32, 3) -> (batch, 16, 1)
         self.relu3 = nn.ReLU(device)
-        self.linear = nn.Linear(in_features=129, out_features=10, device=device)
-        self.lstm = nn.LSTM(input_size=10, hidden_size=10, num_layers=1, device=device)
+        self.linear = nn.Linear(in_features=17, out_features=10, device=device)
+        self.lstm = nn.LSTMCell(input_size=10, hidden_size=10, device=device)
 
     def forward(self, interval, sound_fragment, ht1ct1):  # b, b*(frame_rate+1), (ht, ct)
         x = self.conv1(sound_fragment.unsqueeze(1))
@@ -25,8 +25,8 @@ class DiscriminatorCell(nn.Module):
         x = torch.cat([interval.unsqueeze(1), x.squeeze(2)], dim=1)  # Concatenate
         # print(x.size())
         x = self.linear(x)
-        output, (ht, ct) = self.lstm(x.unsqueeze(0), ht1ct1)
-        return output, (ht, ct)
+        ht, ct = self.lstm(x, ht1ct1)
+        return ht, ct
 
 
 class Discriminator(nn.Module):
@@ -44,9 +44,8 @@ class Discriminator(nn.Module):
     def forward(self, alpha, sound):
         batch_size = sound.shape[0]
         # print('batch:', batch_size)
-        num_layers = 1
-        ht = torch.zeros((num_layers, batch_size, 10)).to(self.device)
-        ct = torch.zeros((num_layers, batch_size, 10)).to(self.device)
+        ht = torch.zeros((batch_size, 10)).to(self.device)
+        ct = torch.zeros((batch_size, 10)).to(self.device)
         for i, alpha_t in enumerate(alpha.permute(1, 0)):
             alpha_t1 = alpha[:, i-1] if i > 0 else 0
             sound_fragment = torch.empty((0, self.frame_rate)).to(self.device)
@@ -62,6 +61,6 @@ class Discriminator(nn.Module):
                     cropped_sound
                 ])
             # print('sound_fragment:', sound_fragment.shape)
-            output, (ht, ct) = self.cell(alpha_t - alpha_t1, sound_fragment, (ht, ct))
+            ht, ct = self.cell(alpha_t - alpha_t1, sound_fragment, (ht, ct))
         # print(ht.shape)
         return self.sigmoid(self.linear2(self.relu(self.linear1(ht))))
