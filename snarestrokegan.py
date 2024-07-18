@@ -43,7 +43,7 @@ def train(device):
         # Train
         generator.train()
         discriminator.train()
-        mean_loss = 0
+        g_loss, d_loss = 0, 0
         for annotation_count in range(min_annotation_count, max_annotation_count + 1):
             print('Annotation count:', annotation_count)
             train_data_loader = train_data_loaders[annotation_count]
@@ -57,7 +57,7 @@ def train(device):
                 z = torch.randn((batch_size, annotation_count, n-1)).to(device)
                 p_fake = discriminator(annotations, generator(z, annotations))
                 loss_d = criterion(p_real, torch.ones_like(p_real).to(device)) + criterion(p_fake, torch.zeros_like(p_real).to(device))
-                mean_loss += loss_d.item() / train_annotations_count
+                d_loss += loss_d.item() / train_annotations_count
                 loss_d.backward()
                 optimizer_d.step()
 
@@ -68,6 +68,7 @@ def train(device):
                 z = torch.randn((batch_size, annotation_count, n-1)).to(device)
                 p_fake = discriminator(annotations, generator(z, annotations))
                 loss_g = criterion(p_fake, torch.ones_like(p_fake).to(device))
+                g_loss += loss_g.item() / train_annotations_count
                 loss_g.backward()
                 optimizer_g.step()
 
@@ -93,12 +94,13 @@ def train(device):
         p_real_trace.append(p_real)
         p_fake_trace.append(p_fake)
 
+        with open('record.pickle', 'a') as f:
+            f.write(f'{g_loss} {d_loss} {p_real} {p_fake}\n')
+
         if (epoch + 1) % 3 == 0:
             print(f'(epoch {epoch + 1}/{epochs}) p_real: {p_real}, p_g: {p_fake}')
             torch.save(generator.state_dict(), 'generator.pth')
             torch.save(discriminator.state_dict(), 'discriminator.pth')
-            with open('record.pickle', 'a') as f:
-                f.write(f'{mean_loss} {p_real} {p_fake}\n')
 
 
 if __name__ == '__main__':
