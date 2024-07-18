@@ -7,7 +7,7 @@ from tqdm.notebook import tqdm
 import time
 
 
-def train(device):
+def train(device, epochs):
     n = 14676
     batch_size = 8
     frame_count = 48000
@@ -23,7 +23,6 @@ def train(device):
     optimizer_d = torch.optim.Adam(discriminator.parameters())
     criterion = torch.nn.BCELoss()
 
-    epochs = 100
     min_annotation_count, max_annotation_count = 3, 12
 
     train_data_loaders, test_data_loaders = {}, {}
@@ -49,8 +48,8 @@ def train(device):
             train_data_loader = train_data_loaders[annotation_count]
             print('Train DataLoader length:', len(train_data_loader))
             i = 0
+            start_time = time.time()
             for annotations, sample in train_data_loader:
-                start_time = time.time()
                 annotations, sample = annotations.to(device), sample.to(device)
                 # D: max V(D, G)
                 p_real = discriminator(annotations, sample)
@@ -74,7 +73,8 @@ def train(device):
 
                 i += 1
                 print(i, end=' ')
-                # print(middle_time - start_time, time.time() - middle_time)
+                print(middle_time - start_time, time.time() - middle_time, time.time() - start_time)
+                start_time = time.time()
             print()
 
         # Evaluate
@@ -106,4 +106,4 @@ def train(device):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(torch.cuda.memory_summary())
-    train(device)
+    train(device, epochs=10)
