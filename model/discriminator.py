@@ -5,9 +5,11 @@ from torch import nn
 class DiscriminatorCell(nn.Module):
     def __init__(self, device, frame_rate):
         super().__init__()
+        self.device = device
         self.frame_rate = frame_rate
 
-        self.gru = nn.GRU(input_size=frame_rate, hidden_size=3, device=device)  # (batch, frame_rate) -> (batch, 3)
+        self.conv1 = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=101, stride=(frame_rate - 100) // 100, device=device)  # (batch, 1, frame_rate) -> (batch, 1, 100)
+        self.gru = nn.GRU(input_size=1, hidden_size=3, num_layers=1, batch_first=True, device=device)  # (batch, 100, 1) -> (1, batch, 3)
         self.conv2 = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, padding=1, device=device)  # (batch, 1, 3) -> (batch, 32, 3)
         self.relu2 = nn.ReLU(device)
         self.conv3 = nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3, device=device)  # (batch, 32, 3) -> (batch, 16, 1)
@@ -15,10 +17,14 @@ class DiscriminatorCell(nn.Module):
         self.linear = nn.Linear(in_features=17, out_features=10, device=device)
         self.lstm = nn.LSTMCell(input_size=10, hidden_size=10, device=device)
 
-    def forward(self, interval, sound_fragment, ht1ct1):  # b, b*(frame_rate+1), (ht, ct)
-        output, ht = self.gru(torch.abs(sound_fragment))
+    def forward(self, interval, sound_fragment, ht1ct1):  # b, b*frame_rate, (ht, ct)
+        abs_sound = torch.abs(sound_fragment)
+        x = self.conv1(abs_sound.unsqueeze(1)).permute(0, 2, 1)  # b*100*1
+        h0 = torch.randn((1, sound_fragment.size()[0], 3)).to(self.device)
+        # print(sound_fragment.size(), abs_sound, h0.size())
+        output, ht = self.gru(x, h0)
         # print(ht.size())
-        x = self.relu2(self.conv2(ht.unsqueeze(1)))
+        x = self.relu2(self.conv2(ht.permute(1, 0, 2)))
         # print(x.size())
         x = self.conv3(x)
         # print(x.size(), interval.size())
