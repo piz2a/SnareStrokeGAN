@@ -5,6 +5,7 @@ from model.discriminator import Discriminator
 from preprocessing.stroke_annotation_dataset import StrokeAnnotationDataset
 from tqdm.notebook import tqdm
 import time
+import os
 
 
 def train(device, epochs):
@@ -15,6 +16,11 @@ def train(device, epochs):
     embedding_layer = get_embedding_layer('./resources/embedding').to(device)
     generator = Generator(device, batch_size, n, frame_count, embedding_layer).to(device)
     discriminator = Discriminator(device, frame_count)
+
+    if os.path.exists('generator.pth'):
+        generator.load_state_dict(torch.load('generator.pth'))
+    if os.path.exists('discriminator.pth'):
+        discriminator.load_state_dict(torch.load('discriminator.pth'))
 
     print('Generator parameters:', [p.numel() for p in generator.parameters()])
     print('Discriminator parameters:', [p.numel() for p in discriminator.parameters()])
@@ -35,6 +41,7 @@ def train(device, epochs):
         test_data_loaders[annotation_count] = test_data_loader
     train_annotations_count = sum(len(train_data_loader) for train_data_loader in train_data_loaders.values())
     test_annotations_count = sum(len(test_data_loader) for test_data_loader in test_data_loaders.values())
+    print('Annotation count:', train_annotations_count, test_annotations_count)
 
     p_real_trace = []
     p_fake_trace = []
@@ -88,17 +95,17 @@ def train(device, epochs):
             for annotations, sample in test_data_loader:
                 annotations, sample = annotations.to(device), sample.to(device)
                 with torch.autograd.no_grad():
-                    p_real += (torch.sum(discriminator(annotations, sample)).item()) / test_annotations_count
+                    p_real += (torch.sum(discriminator(annotations, sample)).item()) / test_annotations_count / batch_size
                     z = torch.randn((batch_size, annotation_count, n-1)).to(device)
-                    p_fake += (torch.sum(discriminator(annotations, generator(z, annotations))).item()) / test_annotations_count
+                    p_fake += (torch.sum(discriminator(annotations, generator(z, annotations))).item()) / test_annotations_count / batch_size
         p_real_trace.append(p_real)
         p_fake_trace.append(p_fake)
 
         print(f'(epoch {epoch + 1}/{epochs}) p_real: {p_real}, p_g: {p_fake}, loss: G {g_loss} / D {d_loss}')
-        with open('record.pickle', 'a') as f:
+        with open('record.txt', 'a') as f:
             f.write(f'{g_loss} {d_loss} {p_real} {p_fake}\n')
 
-        if (epoch + 1) % 3 == 0:
+        if (epoch + 1) % 1 == 0:
             torch.save(generator.state_dict(), 'generator.pth')
             torch.save(discriminator.state_dict(), 'discriminator.pth')
 
@@ -106,4 +113,6 @@ def train(device, epochs):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(torch.cuda.memory_summary())
-    train(device, epochs=10)
+    train(device, epochs=24)
+
+#%%
