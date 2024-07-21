@@ -27,6 +27,7 @@ class StrokeAnnotationDataset(Dataset):
         # Crop dataset
         # print(sum(len(self.dataset_full[i]) for i in self.dataset_full))  # 2209
         # print(self.dataset_full.keys())  # 1 ~ 12
+        # print([(i, len(dataset)) for i, dataset in self.dataset_full.items()])
         self.dataset = self.dataset_full[self.annotation_count]
         edge_index = round(len(self.dataset) * ratio)
         self.dataset = self.dataset[:edge_index] if train else self.dataset[-edge_index:]

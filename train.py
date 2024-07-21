@@ -22,8 +22,9 @@ def train(device, epochs):
     if os.path.exists('discriminator.pth'):
         discriminator.load_state_dict(torch.load('discriminator.pth'))
 
-    print('Generator parameters:', [p.numel() for p in generator.parameters()])
-    print('Discriminator parameters:', [p.numel() for p in discriminator.parameters()])
+    gp = [p.numel() for p in generator.parameters()]
+    print('Generator parameters:', sum(gp) - max(gp))  # Excluding embedding layer
+    print('Discriminator parameters:', sum([p.numel() for p in discriminator.parameters()]))
 
     optimizer_g = torch.optim.Adam(generator.parameters())
     optimizer_d = torch.optim.Adam(discriminator.parameters())
@@ -114,5 +115,3 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(torch.cuda.memory_summary())
     train(device, epochs=24)
-
-#%%
